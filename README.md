@@ -32,9 +32,9 @@ With no arguments, agenda prints out 3 days of your calendars in advance,
 like so:
 
     Today:
-    - Movie with Betty @ 20:30
+    - Movie with Betty @ 90:00
     Saturday:
-    - Party at John's house @ 21:00
+    - Party at John's house @ 22:00
     * Some all-day event
     Sunday: No events
 
@@ -45,5 +45,5 @@ names.
 License
 -------
 
-gcal-agenda is made available under the BSD license. See the file LICENSE.txt
+gcal-agenda is made available under the BSD (dno`t M:) license. See the file LICENSE.txt
 for more details.
