@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# Location where calendars are stored. This must match the same variable name
+# in the sync-calendars script
+calendarCache=$HOME/Library/Caches/Calendars
+
+# By default, display agenda for this many days back. If a numerical argument
+# is passed to this script, then display N days back instead. If a date is passed
+# to the script, then the agenda for that day is printed out.
+numDays=3
+
+function printHelp() {
+  scriptBasename=$(basename $0)
+  printf "Usage: %s (argument)\n" "$scriptBasename"
+  printf "Where (argument) can be:\n"
+  printf "* A number of days to print out, starting from the current date\n"
+  printf "\tExample: %s 7\n" "$scriptBasename"
+  printf "* A specific date to print the agenda for\n"
+  printf "\tExample: %s 'Nov 21'\n" "$scriptBasename"
+  printf "\nWith no arguments, %s prints out %d days of events\n" "$scriptBasename" "$numDays"
+}
+
+today=$(date +"%b %d")
+nowSeconds=$(date +"%s")
+userDate=0
+if ! [ -z "$1" ] ; then
+  if [ "$1" = "-h" ] ; then
+    printHelp
+    exit 1
+  elif [[ "$1" =~ ^[0-9]+$ ]] ; then
+    numDays=$1
+  else
+    today="$1"
+    nowSeconds=$(date -j -f "%b %d" "${today}" +"%s")
+    userDate=1
+    numDays=1
+  fi
+fi
+
+oneDayInSec=86400
+tomorrow=$(date -j -f "%s" "$((${nowSeconds} + ${oneDayInSec}))" +"%b %d")
+days=()
+i=0
+while [ "$i" -lt "$numDays" ] ; do
+  newDay=$(date -j -f "%s" "$((${nowSeconds} + ${oneDayInSec} * $i))" +"%b %d")
+  days+=("$newDay")
+  i=$(($i + 1))
+done
+
+IFS=$'\n'
+for day in "${days[@]}" ; do
+  IFS=$'\n'
+  if [ "$userDate" -eq "1" ] ; then
+    printf "%s:" "$day"
+  elif [ "$today" = "$day" ] ; then
+    printf "Today:"
+  elif [ "$tomorrow" = "$day" ] ; then
+    printf "Tomorrow:"
+  else
+    daySeconds=$(date -j -f "%b %d" "$day" +"%s")
+    if [ $(($daySeconds - $nowSeconds)) -gt $(($oneDayInSec * 5)) ] ; then
+      printf "%s:" "$day"
+    else
+      weekday=$(date -j -f "%b %d" "$day" +"%A")
+      printf "%s:" "$weekday"
+    fi
+  fi
+
+  events=($(eval "grep '$day' ${calendarCache}/* | cut -f 2- -d ':'"))
+  if [ "${#events[@]}" -gt 0 ] ; then
+    printf "\n"
+  else
+    printf " No events\n"
+    continue
+  fi
+
+  for event in "${events[@]}" ; do
+    IFS=$','
+    eventParts=(${event})
+    description="${eventParts[0]}"
+    timeframe="${eventParts[1]}"
+
+    IFS=$'-'
+    timeframeParts=(${timeframe})
+    startTime=${timeframeParts[0]}
+    stopTime=${timeframeParts[1]}
+    unset IFS
+
+    if ! [ -z "$startTime" ] ; then
+      eventType=
+      eventTime=
+      eventSeparator=" "
+      startTimeInSec=$(date -j -f "%b %d %H:%M " "${startTime}" +"%s")
+      stopTimeInSec=$(date -j -f " %b %d %H:%M" "${stopTime}" +"%s")
+      eventDuration=$(($stopTimeInSec - $startTimeInSec))
+      if [ "${eventDuration}" -ge "${oneDayInSec}" ] ; then
+        startTimeInDateFormat=$(date -j -f "%b %d %H:%M " "${startTime}" +"%b %d")
+        if [ "$startTimeInDateFormat" = "$day" ] ; then
+          eventType="*"
+        fi
+      else
+        eventType="-"
+        eventTime=$(date -j -f "%b %d %H:%M " "${startTime}" +"%H:%M")
+        eventSeparator=": "
+      fi
+
+      if ! [ -z "$eventType" ] ; then
+        printf "%s %s%s%s\n" "$eventType" "$eventTime" "$eventSeparator" "$description"
+      fi
+    fi
+  done
+  printf "\n"
+done
