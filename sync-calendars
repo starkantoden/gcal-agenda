@@ -24,8 +24,8 @@ stopDay=$(date -j -f "%s" "$((${nowSeconds} + ${oneDayInSec} * ${numDaysToFetch}
 
 for calendar in "${calendars[@]}" ; do
   eval "$googleCli calendar list --cal '$calendar' --date '$today,$stopDay'" > "/tmp/$calendar"
-  # Do not overwrite calendars if this tool returns non-zero
-  # TODO: If this tool fails, it barfs all over stderr, which gets consumed by cron. Not so nice.
+      # Do not overwrite calendars if this tool returns non-zero
+      # TODO: If this tool fails, it barfs all over stderr, which gets consumed by cron. Not so nice.
   if [ "$?" -eq "0" ] ; then
     mv "/tmp/$calendar" "$cacheLocation/$calendar"
   else
